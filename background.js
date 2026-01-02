@@ -42,6 +42,14 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     handleUnsubscribe(request.subscription).then(sendResponse);
     return true;
   }
+  
+  if (request.action === 'analysisProgress') {
+    // Transmettre le message de progression au popup s'il est ouvert
+    chrome.runtime.sendMessage(request).catch(() => {
+      // Ignorer si personne n'écoute
+    });
+    return false;
+  }
 });
 
 // Analyser les emails depuis le navigateur
@@ -107,17 +115,55 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       'mail.google.com',
       'outlook.live.com',
       'outlook.office.com',
-      'mail.yahoo.com'
+      'outlook.office365.com'
     ];
     
     const isEmailService = emailServices.some(service => 
-      tab.url.includes(service)
+      tab.url && tab.url.includes(service)
     );
     
     if (isEmailService) {
-      // Optionnel : analyser automatiquement les emails sur cette page
       console.log('Page email détectée:', tab.url);
+      // Envoyer un message au content script pour préparer l'analyse
+      chrome.tabs.sendMessage(tabId, { 
+        action: 'emailServiceDetected',
+        service: tab.url.includes('mail.google.com') ? 'gmail' : 'outlook'
+      }).catch(() => {
+        // Ignorer si le content script n'est pas encore prêt
+      });
     }
+  }
+});
+
+// Écouter quand un onglet devient actif
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  try {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (tab.url) {
+      const emailServices = [
+        'mail.google.com',
+        'outlook.live.com',
+        'outlook.office.com',
+        'outlook.office365.com'
+      ];
+      
+      const isEmailService = emailServices.some(service => 
+        tab.url.includes(service)
+      );
+      
+      if (isEmailService) {
+        console.log('Onglet email activé:', tab.url);
+        // Envoyer un message au content script
+        chrome.tabs.sendMessage(activeInfo.tabId, { 
+          action: 'emailServiceDetected',
+          service: tab.url.includes('mail.google.com') ? 'gmail' : 'outlook'
+        }).catch(() => {
+          // Ignorer si le content script n'est pas encore prêt
+        });
+      }
+    }
+  } catch (error) {
+    console.log('Erreur lors de la détection de l\'onglet actif:', error);
   }
 });
 

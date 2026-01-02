@@ -10,8 +10,8 @@
   <div class="container">
     <header class="header">
       <h1>📧 Clean Mail</h1>
-      <div class="stats">
-        <span id="totalCount">0</span> abonnements analysés
+      <div class="stats" id="statsContainer" style="display: none;">
+        <span id="totalCount">0</span> / <span id="totalSubscriptions">0</span> abonnements
       </div>
     </header>
 
@@ -19,6 +19,7 @@
       <div class="loading" id="loading">
         <div class="spinner"></div>
         <p>Analyse de vos emails en cours...</p>
+        <p class="loading-progress" id="loadingProgress" style="font-size: 12px; margin-top: 10px;"></p>
       </div>
       
       <div class="card" id="emailCard" style="display: none;">
@@ -72,15 +73,6 @@
         <h2>Tous vos abonnements ont été analysés !</h2>
         <p>Vous pouvez fermer cette fenêtre.</p>
       </div>
-    </div>
-
-    <div class="actions-bar">
-      <button class="action-btn" id="btnSwipeLeft" title="Se désabonner">
-        <span>✗</span>
-      </button>
-      <button class="action-btn" id="btnSwipeRight" title="Garder">
-        <span>✓</span>
-      </button>
     </div>
   </div>
 

@@ -9,8 +9,11 @@ let currentX = 0;
 const cardContainer = document.getElementById('cardContainer');
 const emailCard = document.getElementById('emailCard');
 const loading = document.getElementById('loading');
+const loadingProgress = document.getElementById('loadingProgress');
 const emptyState = document.getElementById('emptyState');
 const totalCount = document.getElementById('totalCount');
+const totalSubscriptions = document.getElementById('totalSubscriptions');
+const statsContainer = document.getElementById('statsContainer');
 const senderName = document.getElementById('senderName');
 const senderEmail = document.getElementById('senderEmail');
 const senderAvatar = document.getElementById('senderAvatar');
@@ -20,14 +23,43 @@ const companyInfo = document.getElementById('companyInfo');
 const emailSubjects = document.getElementById('emailSubjects');
 const btnKeep = document.getElementById('btnKeep');
 const btnUnsubscribe = document.getElementById('btnUnsubscribe');
-const btnSwipeLeft = document.getElementById('btnSwipeLeft');
-const btnSwipeRight = document.getElementById('btnSwipeRight');
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadSubscriptions();
   setupEventListeners();
+  await checkEmailServiceAndLoad();
 });
+
+// Vérifier si on est sur un service email et charger
+async function checkEmailServiceAndLoad() {
+  try {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tabs[0] && tabs[0].url) {
+      const url = tabs[0].url;
+      const isGmail = url.includes('mail.google.com');
+      const isOutlook = url.includes('outlook.live.com') || url.includes('outlook.office.com') || url.includes('outlook.office365.com');
+      
+      if (isGmail || isOutlook) {
+        // On est sur un service email, analyser directement
+        await loadSubscriptions();
+      } else {
+        // Pas sur un service email, afficher l'état vide
+        showEmptyState();
+      }
+    } else {
+      // Pas d'onglet actif, afficher l'état vide
+      showEmptyState();
+    }
+  } catch (error) {
+    console.error('Erreur lors de la vérification:', error);
+    // En cas d'erreur, essayer quand même de charger
+    try {
+      await loadSubscriptions();
+    } catch (e) {
+      showEmptyState();
+    }
+  }
+}
 
 // Charger les abonnements depuis le stockage
 async function loadSubscriptions() {
@@ -39,10 +71,22 @@ async function loadSubscriptions() {
       // Si aucun abonnement, analyser les emails
       await analyzeEmails();
     } else {
+      currentIndex = 0; // Réinitialiser l'index
+      totalSubscriptions.textContent = subscriptions.length;
       displayCurrentCard();
     }
   } catch (error) {
     console.error('Erreur lors du chargement:', error);
+    // En cas d'erreur, utiliser les données d'exemple (sans afficher d'erreur)
+    try {
+      // Pas de données disponibles
+      subscriptions = [];
+      showEmptyState();
+      return;
+    } catch (fallbackError) {
+      console.error('Erreur même avec les données d\'exemple:', fallbackError);
+    }
+    // Seulement afficher l'erreur si vraiment rien ne fonctionne
     showError('Erreur lors du chargement des données');
   }
 }
@@ -51,24 +95,33 @@ async function loadSubscriptions() {
 async function analyzeEmails() {
   loading.style.display = 'block';
   emailCard.style.display = 'none';
+  emptyState.style.display = 'none';
   
   try {
     // Ici, vous devrez adapter selon l'API email (Gmail, Outlook, etc.)
-    // Pour l'instant, on simule avec des données d'exemple
     subscriptions = await fetchEmailSubscriptions();
     
     if (subscriptions.length > 0) {
       await chrome.storage.local.set({ subscriptions });
-      totalCount.textContent = subscriptions.length;
+      totalSubscriptions.textContent = subscriptions.length;
+      currentIndex = 0; // Réinitialiser l'index
       displayCurrentCard();
     } else {
+      // Si aucune donnée, afficher l'état vide
+      subscriptions = [];
       showEmptyState();
     }
   } catch (error) {
     console.error('Erreur lors de l\'analyse:', error);
-    showError('Impossible d\'analyser les emails');
+    // En cas d'erreur, afficher l'état vide
+    subscriptions = [];
+    showEmptyState();
   } finally {
+    // Toujours cacher le loading à la fin
     loading.style.display = 'none';
+    if (loadingProgress) {
+      loadingProgress.textContent = '';
+    }
   }
 }
 
@@ -77,57 +130,89 @@ async function fetchEmailSubscriptions() {
   try {
     // Essayer de récupérer depuis le content script si on est sur une page email
     const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tabs[0]) {
-      try {
-        const response = await chrome.tabs.sendMessage(tabs[0].id, { action: 'analyzePage' });
-        if (response && response.success && response.subscriptions) {
-          return response.subscriptions;
+    if (tabs[0] && tabs[0].url) {
+      const url = tabs[0].url;
+      const isGmail = url.includes('mail.google.com');
+      const isOutlook = url.includes('outlook.live.com') || url.includes('outlook.office.com');
+      
+      if (isGmail || isOutlook) {
+        try {
+          // Configurer l'écouteur de progression une seule fois
+          if (!window.progressListenerSet) {
+            chrome.runtime.onMessage.addListener((message) => {
+              if (message.action === 'analysisProgress' && loadingProgress) {
+                loadingProgress.textContent = `Analyse en cours... ${message.count} expéditeurs trouvés (scroll ${message.scrollCount})`;
+              }
+            });
+            window.progressListenerSet = true;
+          }
+          
+          // Mettre à jour le message de progression
+          if (loadingProgress) {
+            loadingProgress.textContent = 'Analyse de Gmail en cours...';
+          }
+          
+          // Demander l'analyse complète avec timeout de 50 secondes
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('Timeout après 50 secondes')), 50000)
+          );
+          
+          const analysisPromise = chrome.tabs.sendMessage(tabs[0].id, { action: 'analyzePage' });
+          
+          let response;
+          try {
+            response = await Promise.race([analysisPromise, timeoutPromise]);
+          } catch (raceError) {
+            // Si c'est le timeout ou une autre erreur
+            console.log('Erreur lors de l\'analyse (timeout ou erreur):', raceError.message);
+            if (loadingProgress) {
+              loadingProgress.textContent = raceError.message.includes('Timeout') ? 'Analyse interrompue (timeout)' : 'Erreur lors de l\'analyse';
+            }
+            return [];
+          }
+          
+          if (response && response.success && response.subscriptions && Array.isArray(response.subscriptions) && response.subscriptions.length > 0) {
+            console.log('Données récupérées depuis le content script:', response.subscriptions.length);
+            if (loadingProgress) {
+              loadingProgress.textContent = `${response.subscriptions.length} abonnements trouvés !`;
+            }
+            return response.subscriptions;
+          } else if (response && response.success && response.subscriptions && response.subscriptions.length === 0) {
+            // Analyse réussie mais aucun abonnement trouvé
+            console.log('Analyse terminée, aucun abonnement trouvé');
+            if (loadingProgress) {
+              loadingProgress.textContent = 'Aucun abonnement trouvé';
+            }
+            return [];
+          } else {
+            // Réponse invalide
+            console.log('Réponse invalide du content script:', response);
+            return [];
+          }
+        } catch (error) {
+          console.log('Erreur lors de l\'analyse:', error.message);
+          if (loadingProgress) {
+            loadingProgress.textContent = 'Erreur lors de l\'analyse';
+          }
+          // Retourner un tableau vide en cas d'erreur
+          return [];
         }
-      } catch (error) {
-        // Pas de content script disponible ou erreur
-        console.log('Content script non disponible, utilisation des données stockées');
       }
     }
-    
-    // Essayer de récupérer depuis le background
-    const bgResponse = await chrome.runtime.sendMessage({ action: 'analyzeEmails' });
-    if (bgResponse && bgResponse.success) {
-      const result = await chrome.storage.local.get(['subscriptions']);
-      return result.subscriptions || [];
-    }
-    
-    // Fallback: données d'exemple pour la démo
-    return getMockSubscriptions();
   } catch (error) {
-    console.error('Erreur lors de la récupération:', error);
-    return getMockSubscriptions();
+    console.log('Erreur lors de la récupération:', error.message);
   }
-}
-
-// Données d'exemple pour la démonstration
-function getMockSubscriptions() {
-  return [
-    {
-      sender: 'newsletter@example.com',
-      senderName: 'Example Newsletter',
-      emailCount: 15,
-      lastEmailDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      subjects: ['Promotion spéciale', 'Nouveautés', 'Offre exclusive', 'Black Friday', 'Soldes d\'été'],
-      domain: 'example.com'
-    },
-    {
-      sender: 'info@technews.com',
-      senderName: 'Tech News',
-      emailCount: 42,
-      lastEmailDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      subjects: ['Nouvelles technologies', 'IA et Machine Learning', 'Tendances 2024'],
-      domain: 'technews.com'
-    }
-  ];
+  
+  // Si on n'est pas sur Gmail/Outlook ou si l'analyse échoue, retourner un tableau vide
+  console.log('Aucune donnée disponible');
+  return [];
 }
 
 // Afficher la carte actuelle
 async function displayCurrentCard() {
+  // Cacher le loading et l'erreur
+  loading.style.display = 'none';
+  
   if (currentIndex >= subscriptions.length) {
     showEmptyState();
     return;
@@ -167,7 +252,14 @@ async function displayCurrentCard() {
   emailCard.style.display = 'block';
   emptyState.style.display = 'none';
   
-  totalCount.textContent = `${currentIndex + 1} / ${subscriptions.length}`;
+  // Mettre à jour le compteur (seulement si il y a des abonnements)
+  if (subscriptions.length > 0) {
+    statsContainer.style.display = 'block';
+    totalCount.textContent = currentIndex + 1;
+    totalSubscriptions.textContent = subscriptions.length;
+  } else {
+    statsContainer.style.display = 'none';
+  }
 }
 
 // Charger les informations sur l'entreprise depuis Internet
@@ -284,8 +376,6 @@ function setupEventListeners() {
   // Boutons d'action
   btnKeep.addEventListener('click', () => handleKeep());
   btnUnsubscribe.addEventListener('click', () => handleUnsubscribe());
-  btnSwipeLeft.addEventListener('click', () => handleUnsubscribe());
-  btnSwipeRight.addEventListener('click', () => handleKeep());
   
   // Swipe avec la souris
   emailCard.addEventListener('mousedown', startDrag);
@@ -467,11 +557,18 @@ function showEmptyState() {
   loading.style.display = 'none';
   emailCard.style.display = 'none';
   emptyState.style.display = 'block';
+  statsContainer.style.display = 'none';
+  if (loadingProgress) {
+    loadingProgress.textContent = '';
+  }
 }
 
 // Afficher une erreur
 function showError(message) {
   loading.innerHTML = `<p style="color: #f44336;">${message}</p>`;
   loading.style.display = 'block';
+  emailCard.style.display = 'none';
+  emptyState.style.display = 'none';
+  statsContainer.style.display = 'none';
 }
 
