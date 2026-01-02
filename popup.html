@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clean Mail Subscriptions</title>
+  <link rel="stylesheet" href="styles/popup.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>📧 Clean Mail</h1>
+      <div class="stats">
+        <span id="totalCount">0</span> abonnements analysés
+      </div>
+    </header>
+
+    <div class="card-container" id="cardContainer">
+      <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Analyse de vos emails en cours...</p>
+      </div>
+      
+      <div class="card" id="emailCard" style="display: none;">
+        <div class="card-header">
+          <div class="sender-info">
+            <div class="sender-avatar" id="senderAvatar">📧</div>
+            <div class="sender-details">
+              <h2 id="senderName">Expéditeur</h2>
+              <p id="senderEmail">email@example.com</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-content">
+          <div class="stats-section">
+            <div class="stat-item">
+              <span class="stat-label">Emails reçus</span>
+              <span class="stat-value" id="emailCount">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Dernier email</span>
+              <span class="stat-value" id="lastEmail">-</span>
+            </div>
+          </div>
+
+          <div class="info-section" id="infoSection">
+            <h3>Informations</h3>
+            <div id="companyInfo" class="company-info">
+              <p>Recherche d'informations en cours...</p>
+            </div>
+          </div>
+
+          <div class="preview-section">
+            <h3>Derniers sujets</h3>
+            <ul id="emailSubjects" class="subjects-list"></ul>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <button class="btn btn-keep" id="btnKeep">
+            <span>✓ Garder</span>
+          </button>
+          <button class="btn btn-unsubscribe" id="btnUnsubscribe">
+            <span>✗ Se désabonner</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="empty-state" id="emptyState" style="display: none;">
+        <div class="empty-icon">🎉</div>
+        <h2>Tous vos abonnements ont été analysés !</h2>
+        <p>Vous pouvez fermer cette fenêtre.</p>
+      </div>
+    </div>
+
+    <div class="actions-bar">
+      <button class="action-btn" id="btnSwipeLeft" title="Se désabonner">
+        <span>✗</span>
+      </button>
+      <button class="action-btn" id="btnSwipeRight" title="Garder">
+        <span>✓</span>
+      </button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
+

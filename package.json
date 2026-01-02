@@ -1,0 +1,21 @@
+{
+  "name": "clean-mail-subscriptions",
+  "version": "1.0.0",
+  "description": "Extension de navigateur pour analyser et gérer les abonnements email avec une interface style Tinder",
+  "scripts": {
+    "build": "echo 'Extension prête à être chargée dans le navigateur'",
+    "package": "zip -r clean-mail-subscriptions.zip . -x '*.git*' 'node_modules/*' '*.zip'"
+  },
+  "keywords": [
+    "browser-extension",
+    "email",
+    "subscriptions",
+    "unsubscribe",
+    "newsletter"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {},
+  "dependencies": {}
+}
+
