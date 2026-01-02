@@ -6,10 +6,12 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  width: 400px;
+  width: 100%;
+  max-width: 400px;
   min-height: 600px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   color: #333;
+  margin: 0 auto;
 }
 
 .container {
@@ -309,5 +311,286 @@ body {
 
 .subjects-list::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  body {
+    max-width: 100%;
+    min-height: 100vh;
+  }
+
+  .container {
+    min-height: 100vh;
+  }
+
+  .header {
+    padding: 15px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+  }
+
+  .stats {
+    font-size: 12px;
+  }
+
+  .card-container {
+    padding: 15px;
+  }
+
+  .card {
+    max-width: 100%;
+    border-radius: 15px;
+  }
+
+  .card-header {
+    padding: 15px;
+  }
+
+  .sender-info {
+    gap: 12px;
+  }
+
+  .sender-avatar {
+    width: 50px;
+    height: 50px;
+    font-size: 24px;
+  }
+
+  .sender-details h2 {
+    font-size: 18px;
+  }
+
+  .sender-details p {
+    font-size: 12px;
+  }
+
+  .card-content {
+    padding: 15px;
+  }
+
+  .stats-section {
+    gap: 15px;
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-value {
+    font-size: 18px;
+  }
+
+  .info-section {
+    margin-bottom: 15px;
+  }
+
+  .info-section h3 {
+    font-size: 14px;
+  }
+
+  .company-info {
+    padding: 12px;
+    font-size: 13px;
+  }
+
+  .preview-section {
+    margin-bottom: 15px;
+  }
+
+  .preview-section h3 {
+    font-size: 14px;
+  }
+
+  .subjects-list {
+    max-height: 100px;
+  }
+
+  .subjects-list li {
+    font-size: 12px;
+    padding: 6px 0;
+  }
+
+  .card-footer {
+    padding: 15px;
+    gap: 8px;
+    flex-direction: column;
+  }
+
+  .btn {
+    padding: 12px;
+    font-size: 14px;
+    width: 100%;
+  }
+
+  .empty-state {
+    padding: 30px 15px;
+  }
+
+  .empty-icon {
+    font-size: 50px;
+    margin-bottom: 15px;
+  }
+
+  .empty-state h2 {
+    font-size: 20px;
+  }
+
+  .empty-state p {
+    font-size: 14px;
+  }
+
+  .loading p {
+    font-size: 14px;
+  }
+
+  .loading-progress {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 360px) {
+  .header {
+    padding: 12px;
+  }
+
+  .header h1 {
+    font-size: 18px;
+  }
+
+  .card-container {
+    padding: 12px;
+  }
+
+  .card-header {
+    padding: 12px;
+  }
+
+  .sender-avatar {
+    width: 45px;
+    height: 45px;
+    font-size: 20px;
+  }
+
+  .sender-details h2 {
+    font-size: 16px;
+  }
+
+  .sender-details p {
+    font-size: 11px;
+  }
+
+  .card-content {
+    padding: 12px;
+  }
+
+  .stats-section {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .stat-item {
+    width: 100%;
+  }
+
+  .card-footer {
+    padding: 12px;
+  }
+
+  .btn {
+    padding: 10px;
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  body {
+    max-width: 450px;
+  }
+
+  .card {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 769px) {
+  body {
+    max-width: 400px;
+  }
+}
+
+/* Amélioration pour les très petits écrans (orientation paysage) */
+@media (max-height: 500px) {
+  .container {
+    min-height: auto;
+  }
+
+  .card-container {
+    padding: 10px;
+  }
+
+  .card-header {
+    padding: 12px;
+  }
+
+  .sender-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+
+  .sender-details h2 {
+    font-size: 16px;
+  }
+
+  .sender-details p {
+    font-size: 11px;
+  }
+
+  .card-content {
+    padding: 12px;
+  }
+
+  .stats-section {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+  }
+
+  .info-section,
+  .preview-section {
+    margin-bottom: 10px;
+  }
+
+  .subjects-list {
+    max-height: 80px;
+  }
+
+  .card-footer {
+    padding: 12px;
+  }
+
+  .btn {
+    padding: 10px;
+    font-size: 13px;
+  }
+}
+
+/* Amélioration du touch sur mobile */
+@media (hover: none) and (pointer: coarse) {
+  .btn {
+    min-height: 44px; /* Taille minimale recommandée pour le touch */
+  }
+
+  .card {
+    cursor: default;
+  }
+
+  .card:active {
+    cursor: default;
+  }
 }
 

@@ -306,6 +306,24 @@ async function extractFromGmail(selectors, senderMap) {
             }
           }
           
+          // Détecter si c'est une newsletter
+          // Chercher "newsletter" dans le sujet, le texte de la ligne, ou le nom de l'expéditeur
+          const rowText = (row.textContent || '').toLowerCase();
+          const subjectLower = subject.toLowerCase();
+          const senderNameLower = (senderName || '').toLowerCase();
+          const newsletterKeywords = ['newsletter', 'news letter', 'news-letter', 'bulletin', 'infolettre', 'mailing', 'mailing list'];
+          
+          let isNewsletter = false;
+          for (const keyword of newsletterKeywords) {
+            if (subjectLower.includes(keyword) || 
+                rowText.includes(keyword) || 
+                senderNameLower.includes(keyword) ||
+                cleanSender.includes(keyword)) {
+              isNewsletter = true;
+              break;
+            }
+          }
+          
           // Chercher la date
           let emailDate = new Date().toISOString();
           const dateSelectors = Array.isArray(selectors.date) 
@@ -337,12 +355,18 @@ async function extractFromGmail(selectors, senderMap) {
               subjects: [],
               lastEmailDate: emailDate,
               firstEmailDate: emailDate,
-              domain: extractDomain(cleanSender)
+              domain: extractDomain(cleanSender),
+              isNewsletter: false // Sera mis à jour ci-dessous
             });
           }
           
           const subscription = senderMap.get(cleanSender);
           subscription.emailCount++;
+          
+          // Mettre à jour le flag newsletter si détecté
+          if (isNewsletter) {
+            subscription.isNewsletter = true;
+          }
           
           if (subject && !subscription.subjects.includes(subject)) {
             subscription.subjects.push(subject);
@@ -430,6 +454,10 @@ async function extractFromGmail(selectors, senderMap) {
   
   console.log(`Analyse terminée: ${senderMap.size} expéditeurs trouvés après ${scrollCount} scrolls`);
   
+  // Compter les newsletters détectées
+  const newsletters = Array.from(senderMap.values()).filter(sub => sub.isNewsletter);
+  console.log(`${newsletters.length} newsletters détectées sur ${senderMap.size} expéditeurs`);
+  
   return Array.from(senderMap.values());
 }
 
@@ -437,6 +465,8 @@ async function extractFromGmail(selectors, senderMap) {
 async function extractFromOutlook(selectors, senderMap) {
   await waitForElement(selectors.emailList);
   const emailElements = document.querySelectorAll(selectors.emailList);
+  
+  const newsletterKeywords = ['newsletter', 'news letter', 'news-letter', 'bulletin', 'infolettre', 'mailing', 'mailing list'];
   
   emailElements.forEach(element => {
     try {
@@ -449,21 +479,45 @@ async function extractFromOutlook(selectors, senderMap) {
         const subject = subjectElement ? subjectElement.textContent.trim() : '';
         
         if (sender && sender.includes('@')) {
-          const cleanSender = sender.replace(/[<>]/g, '').trim();
+          const cleanSender = sender.replace(/[<>]/g, '').trim().toLowerCase();
+          
+          // Détecter si c'est une newsletter
+          const elementText = (element.textContent || '').toLowerCase();
+          const subjectLower = (subject || '').toLowerCase();
+          const senderName = extractSenderName(senderElement);
+          const senderNameLower = (senderName || '').toLowerCase();
+          
+          let isNewsletter = false;
+          for (const keyword of newsletterKeywords) {
+            if (subjectLower.includes(keyword) || 
+                elementText.includes(keyword) || 
+                senderNameLower.includes(keyword) ||
+                cleanSender.includes(keyword)) {
+              isNewsletter = true;
+              break;
+            }
+          }
           
           if (!senderMap.has(cleanSender)) {
             senderMap.set(cleanSender, {
               sender: cleanSender,
-              senderName: extractSenderName(senderElement),
+              senderName: senderName || cleanSender.split('@')[0],
               emailCount: 0,
               subjects: [],
               lastEmailDate: new Date().toISOString(),
-              domain: extractDomain(cleanSender)
+              domain: extractDomain(cleanSender),
+              isNewsletter: false
             });
           }
           
           const subscription = senderMap.get(cleanSender);
           subscription.emailCount++;
+          
+          // Mettre à jour le flag newsletter si détecté
+          if (isNewsletter) {
+            subscription.isNewsletter = true;
+          }
+          
           if (subject && !subscription.subjects.includes(subject)) {
             subscription.subjects.push(subject);
           }
